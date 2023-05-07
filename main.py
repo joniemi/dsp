@@ -1,37 +1,80 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.fft import fft, fftfreq
 
-from common import plots
+from common import plots, common
 from farina import logsweep
 
 
 def main():
     fs = 48_000
-    f0, f1 = 10, fs / 2
-    duration = 1.0
+    f0, f1 = 20, 20_000
+    duration = 2.0
     x = logsweep.generate(f0, f1, fs, duration)
     logsweep.apply_window(x, 2048)
 
+    N = x.shape[-1]
+    nfft = N
+    freqs = fftfreq(nfft, d=1 / fs)
+
     plt.figure()
     plt.plot(x)
-    plots.plot_magnitude_and_phase(x, fs)
+
+    plt.figure()
+    plt.semilogx(freqs, calculate_magnitude(x, nfft))
+    plt.title('Magnitude response')
+    plt.xlim([10, fs//2])
+    plt.grid(True)
 
     # simulate distortion
-    y = x * 1.05
+    y = x * 1.00
     y = np.clip(y, -1.0, 1.0)
 
     inv_filter = logsweep.inverse_filter(x, f0, f1)
     ir = logsweep.impulse_response(y, inv_filter)
-    thd_responses = logsweep.thd_impulse_responses(ir, f0, f1, 4)
 
     plt.figure()
+    plt.semilogx(freqs, calculate_magnitude(x, nfft), label="sweep")
+    plt.semilogx(freqs, calculate_magnitude(inv_filter, nfft), label="inverse filter")
+    plt.semilogx(freqs, calculate_magnitude(ir[-N:], nfft), label="sweep filtered")
+    plt.title('Magnitude response')
+    plt.legend()
+    plt.xlim([10, fs//2])
+    plt.grid(True)
 
-    for thd_resp in thd_responses:
-        plt.semilogx(thd_resp)
+    thd_responses = logsweep.thd_impulse_responses(ir, f0, f1, 5)
+
+    plt.figure()
+    nfft = 2 ** 15
+    freqs = fftfreq(nfft, 1/fs)
+    plt.semilogx(
+        freqs,
+        calculate_magnitude(ir[-N:], nfft),
+        label="freq. resp"
+    )
+
+    for i, thd_resp in enumerate(thd_responses):
+        plt.semilogx(freqs, calculate_magnitude(thd_resp, nfft), label=f"harmonic #{i}")
+
+    plt.legend()
+    plt.grid()
+    plt.xlim([10, fs//2])
+
+    plt.figure()
+    plt.plot(ir)
 
     plt.show()
 
     return 0
+
+
+def calculate_magnitude(x: np.ndarray, nfft, scale: str = "db") -> np.ndarray:
+    magn = np.abs(fft(x, n=nfft)) / (nfft / 2)
+
+    if scale == "db":
+        magn = common.to_dB(magn)
+
+    return magn
 
 
 if __name__ == "__main__":

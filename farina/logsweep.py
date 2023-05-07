@@ -8,7 +8,8 @@ from scipy import signal
 
 def generate(f0, f1, fs, duration) -> np.ndarray:
     num_samples = int(duration * fs)
-    f = np.logspace(np.log(f0), np.log(f1), num_samples, base=np.e)
+    freqs = np.logspace(np.log(f0), np.log(f1), num_samples, base=np.e)
+    freqs /= fs
     y = np.zeros(num_samples)
     curr_phase = 0
 
@@ -16,7 +17,7 @@ def generate(f0, f1, fs, duration) -> np.ndarray:
     # vectors.
     for n in range(len(y)):
         y[n] = np.sin(2 * np.pi * curr_phase)
-        curr_phase += f[n] / fs
+        curr_phase += freqs[n]
         if curr_phase > 1.0:
             curr_phase = curr_phase - 1.0
 

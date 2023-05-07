@@ -8,8 +8,17 @@ from scipy import signal
 
 def generate(f0, f1, fs, duration) -> np.ndarray:
     num_samples = int(duration * fs)
-    t = np.linspace(0, 1, num_samples)
-    y = signal.chirp(t, f0=f0, t1=1, f1=f1, method="logarithmic", phi=270)
+    f = np.logspace(np.log(f0), np.log(f1), num_samples, base=np.e)
+    y = np.zeros(num_samples)
+    curr_phase = 0
+
+    # Using a brute force loop because signal.chirp produces errors with long
+    # vectors.
+    for n in range(len(y)):
+        y[n] = np.sin(2 * np.pi * curr_phase)
+        curr_phase += f[n] / fs
+        if curr_phase > 1.0:
+            curr_phase = curr_phase - 1.0
 
     return y
 

@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.fft import fft, fftfreq
 
+import latency.detect as ld
 from common import plots, common
 from farina import logsweep
 
@@ -95,7 +96,16 @@ def farina_demo():
 
 
 def latency_demo():
-    return 0
+    # prepare test vectors
+    num_samples = 10_000
+    delay = 1000
+    white_noise = np.random.uniform(-1.0, 1.0, num_samples)
+    delayed = np.zeros(white_noise.shape)
+    delayed[delay:] = white_noise[:-delay]
+
+    lat = ld.detect_latency(white_noise, delayed)
+    print(f"Latency: {lat}")
+    ld.plot_xcorr(white_noise, delayed)
 
 
 DEMOS = {
